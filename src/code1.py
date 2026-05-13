@@ -14,7 +14,6 @@ import tsa
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
 DC_CHARGER_POWER = 240 # TOTAL DC CHARGER POWER
 RECTIFIER_POWER = 30 # POWER OF EACH RECTIFIER
 RECTIFIERS = [f"R{i}" for i in range(1, 9)]
@@ -26,7 +25,6 @@ def generate_charging_data(weeks):
     print("-" * 70)
     print(f"{'Session ID':<25} | {'Charger':<16} | {'Power (kW)':<10} | {'Duration (min)':<12}")
     print("-" * 70)
-    
     output = []
     output.append("timestamp,charger_id,transaction_id,module_id,temp,live_capacity_kw,utilization_pct,power_on_flag")
     start_date = datetime.datetime(2026, 1, 1, 0, 0, 0)
@@ -55,7 +53,6 @@ def generate_charging_data(weeks):
             else:
                 max_power = 22
                 active_modules = 1
-            
             modules_per_rectifier = 30 if max_power > 22 else 22
             requested_power = random.choice([60, 90, 120, 150, 180, 240])
             requested_power = min(requested_power, max_power)
@@ -200,7 +197,6 @@ def engineer_features(input_file, output_file):
     result_df = pd.DataFrame(rectifier_features)
     result_df = add_history_features_rectifier(result_df)
     
-    # Create target ranks for ground truth (used by code2.py)
     ranking_data = []
     for (_, group) in result_df.groupby(['charger_id', 'transaction_id']):
         group = group.copy().sort_values('rank_score', ascending=False)
@@ -212,7 +208,6 @@ def engineer_features(input_file, output_file):
     print(f"Feature engineering complete: {output_file}")
     return output_file
 
-# ==================== STEP 3: SCALAR NORMALIZATION ====================
 def scalar_normalization(input_file, output_file="normalized_data.csv"):
     print("\n=== Scalar Normalization ===")
     df = pd.read_csv(input_file)
@@ -223,7 +218,6 @@ def scalar_normalization(input_file, output_file="normalized_data.csv"):
     print(f"Normalization complete: {output_file}")
     return output_file
 
-# ==================== STEP 4: TIME SERIES ANALYSIS ====================
 def time_series_analysis(input_file):
     print("\n=== Time Series Analysis (Visuals) ===")
     df = pd.read_csv(input_file)
@@ -239,7 +233,6 @@ def time_series_analysis(input_file):
         plt.close()
     print("Thermal profile plots saved.")
 
-# ==================== MAIN ====================
 def main(weeks=1):
     print("\n" + "="*60)
     print("PHASE 1: DATA PREPARATION PIPELINE")
@@ -247,15 +240,10 @@ def main(weeks=1):
     
     raw_file = generate_charging_data(weeks)
     features_file = "engineered_features.csv"
-    
     engineer_features(raw_file, features_file)
     scalar_normalization(features_file)
-    
-    # Generate minute-level preprocessed data for TSA
     preprocessed_ts_file = "preprocessed_minute_data.csv"
     feature_engineering.generate_preprocessed_minute_data(raw_file, preprocessed_ts_file)
-    
-    # Run TSA with the minute-level data
     tsa.run_tsa_visuals(preprocessed_ts_file)
     
     print("\n" + "="*60)

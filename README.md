@@ -1,1 +1,2 @@
-# OptiChargeAI - Dynamic Power Allocation and Predictive Health Engine for DC Chargers
+# OptiChargeAI 
+Dynamic Power Allocation and Predictive Health Engine for DC Chargers

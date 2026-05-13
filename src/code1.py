@@ -14,6 +14,7 @@ import tsa
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 DC_CHARGER_POWER = 240 # TOTAL DC CHARGER POWER
 RECTIFIER_POWER = 30 # POWER OF EACH RECTIFIER
 RECTIFIERS = [f"R{i}" for i in range(1, 9)]
@@ -24,7 +25,7 @@ def generate_charging_data(weeks):
     print(f"Generating {weeks} weeks ({weeks * 7} days) of charging sessions...")
     print("-" * 70)
     print(f"{'Session ID':<25} | {'Charger':<16} | {'Power (kW)':<10} | {'Duration (min)':<12}")
-    print("-" * 70)
+    print("-" * 70)  
     output = []
     output.append("timestamp,charger_id,transaction_id,module_id,temp,live_capacity_kw,utilization_pct,power_on_flag")
     start_date = datetime.datetime(2026, 1, 1, 0, 0, 0)
@@ -39,8 +40,7 @@ def generate_charging_data(weeks):
             session_minute = random.randint(0, 59)
             timestamp = current_date + datetime.timedelta(hours=session_hour, minutes=session_minute)
             charger_id = random.choice(CHARGER_IDS)
-            transaction_id = f"TXN-{timestamp.strftime('%Y%m%d')}-{session+1:03d}"
-            
+            transaction_id = f"TXN-{timestamp.strftime('%Y%m%d')}-{session+1:03d}"          
             if "DC-CHG-240" in charger_id:
                 max_power = 240
                 active_modules = random.randint(3, 8)
@@ -53,6 +53,7 @@ def generate_charging_data(weeks):
             else:
                 max_power = 22
                 active_modules = 1
+            
             modules_per_rectifier = 30 if max_power > 22 else 22
             requested_power = random.choice([60, 90, 120, 150, 180, 240])
             requested_power = min(requested_power, max_power)
@@ -70,8 +71,7 @@ def generate_charging_data(weeks):
                     if module_idx < active_modules:
                         power_on_flag = 1
                         live_capacity_kw = base_capacity + (minute * 0.05) + random.uniform(-0.3, 0.3)
-                        live_capacity_kw = min(30.0, live_capacity_kw)
-                        
+                        live_capacity_kw = min(30.0, live_capacity_kw)                      
                         max_available = active_modules * 30
                         utilization = (actual_power / max_available) * 100
                         utilization_pct = utilization + random.uniform(-3, 3)
@@ -96,7 +96,7 @@ def generate_charging_data(weeks):
     return filename
 
 def add_history_features_rectifier(df):
-    print("\n  Computing history/wear features per rectifier...")   
+    print("\n  Computing history/wear features per rectifier.........")   
     df = df.sort_values(['charger_id', 'rectifier_id', 'session_start_time'])    
     history_features = []    
     for charger_id in df['charger_id'].unique():
@@ -175,12 +175,10 @@ def engineer_features(input_file, output_file):
                 features['temp_max'] = temps.max()
                 features['temp_min'] = temps.min()
                 features['temp_end'] = temps.iloc[-1]
-                features['delta_temp'] = features['temp_end'] - temps.iloc[0]
-                
+                features['delta_temp'] = features['temp_end'] - temps.iloc[0]           
                 if len(temps) > 1:
                     features['temp_slope'] = np.polyfit(np.arange(len(temps)), temps.values, 1)[0]
-                else: features['temp_slope'] = 0
-                
+                else: features['temp_slope'] = 0             
                 features['temp_above_threshold'] = (temps > 50).sum()
                 features['high_temp_ratio'] = features['temp_above_threshold'] / len(temps) * 100
             else:
@@ -189,8 +187,7 @@ def engineer_features(input_file, output_file):
                 features['temp'] = mod_data['temp'].mean()
                 features['temp_max'] = mod_data['temp'].max()
                 features['temp_min'] = mod_data['temp'].min()
-                features['temp_end'] = features['temp']
-            
+                features['temp_end'] = features['temp']        
             features['rank_score'] = features['live_capacity_kw'] * (100 - features['utilization_pct']) / 100
             rectifier_features.append(features)
     
@@ -207,7 +204,7 @@ def engineer_features(input_file, output_file):
     result_df.to_csv(output_file, index=False)
     print(f"Feature engineering complete: {output_file}")
     return output_file
-
+    
 def scalar_normalization(input_file, output_file="normalized_data.csv"):
     print("\n=== Scalar Normalization ===")
     df = pd.read_csv(input_file)
@@ -236,16 +233,14 @@ def time_series_analysis(input_file):
 def main(weeks=1):
     print("\n" + "="*60)
     print("PHASE 1: DATA PREPARATION PIPELINE")
-    print("="*60)
-    
+    print("="*60)    
     raw_file = generate_charging_data(weeks)
-    features_file = "engineered_features.csv"
+    features_file = "engineered_features.csv"    
     engineer_features(raw_file, features_file)
     scalar_normalization(features_file)
     preprocessed_ts_file = "preprocessed_minute_data.csv"
     feature_engineering.generate_preprocessed_minute_data(raw_file, preprocessed_ts_file)
-    tsa.run_tsa_visuals(preprocessed_ts_file)
-    
+    tsa.run_tsa_visuals(preprocessed_ts_file)    
     print("\n" + "="*60)
     print("DATA PREPARATION COMPLETE")
     print("Proceed to run code2.py for Training & Simulation")
